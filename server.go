@@ -386,6 +386,14 @@ func startServer(port int, pubKeyHex, webhookURL string, defaultServerLat, defau
 		fileServer := http.FileServer(http.FS(webSubFS))
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			enableCORS(w)
+			p := r.URL.Path
+			if p == "/" || p == "/index.html" || p == "/flutter_bootstrap.js" ||
+				p == "/flutter_service_worker.js" || p == "/version.json" ||
+				p == "/main.dart.js" {
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				w.Header().Set("Pragma", "no-cache")
+				w.Header().Set("Expires", "0")
+			}
 			fileServer.ServeHTTP(w, r)
 		})
 	}
