@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: atmo-pressure-monitor
+  namespace: default
+spec:
+  # Run every 3 hours at minute 0 (00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 JST)
+  schedule: "0 */3 * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: atmo
+              image: ghcr.io/aobaiwaki123/atmo:latest
+              args:
+                - "-before"
+                - "12"
+                - "-ahead"
+                - "24"
+              env:
+                - name: TZ
+                  value: "Asia/Tokyo"
+                - name: DISCORD_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: atmo-secrets
+                      key: discord-webhook-url

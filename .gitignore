@@ -1,0 +1,5 @@
+# Binaries
+atmo
+*.exe
+*.test
+*.out
