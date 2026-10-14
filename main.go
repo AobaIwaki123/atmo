@@ -49,7 +49,7 @@ func getCurrentIndex(times []string) int {
 func main() {
 	lat := flag.Float64("lat", defaultLat, "Latitude")
 	lon := flag.Float64("lon", defaultLon, "Longitude")
-	hoursBefore := flag.Int("before", 12, "Hours in the past to display")
+	hoursBefore := flag.Int("before", 24, "Hours in the past to display")
 	hoursAhead := flag.Int("ahead", 24, "Hours in the future to display")
 	chartHeight := flag.Int("height", 10, "Height of ASCII chart")
 	outPath := flag.String("out", "", "Output PNG chart image file path")

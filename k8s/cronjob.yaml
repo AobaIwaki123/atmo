@@ -18,7 +18,7 @@ spec:
               image: ghcr.io/aobaiwaki123/atmo:latest
               args:
                 - "-before"
-                - "12"
+                - "24"
                 - "-ahead"
                 - "24"
               env:

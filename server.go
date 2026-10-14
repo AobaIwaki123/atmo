@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 )
 
 // Discord Interaction types
@@ -138,7 +137,7 @@ func startServer(port int, pubKeyHex, webhookURL string, lat, lon float64) error
 			// If webhook is provided, also send image to channel
 			if webhookURL != "" {
 				go func() {
-					pngBytes, err := generateChartPNG(data, 12, 24)
+					pngBytes, err := generateChartPNG(data, 24, 24)
 					if err == nil {
 						sendDiscordWebhook(webhookURL, pngBytes, data)
 					}
