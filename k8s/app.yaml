@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: atmo
-          image: ghcr.io/aobaiwaki123/atmo:4114f84
+          image: ghcr.io/aobaiwaki123/atmo:9d4d593
           args:
             - "-serve"
             - "-port"
