@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: atmo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atmo
+  namespace: atmo
+  labels:
+    app: atmo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atmo
+  template:
+    metadata:
+      labels:
+        app: atmo
+    spec:
+      containers:
+        - name: atmo
+          image: ghcr.io/aobaiwaki123/atmo:latest
+          args:
+            - "-serve"
+            - "-port"
+            - "8080"
+          env:
+            - name: TZ
+              value: "Asia/Tokyo"
+            - name: DISCORD_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: atmo-secrets
+                  key: discord-webhook-url
+                  optional: true
+            - name: DISCORD_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: atmo-secrets
+                  key: discord-public-key
+                  optional: true
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atmo
+  namespace: atmo
+spec:
+  selector:
+    app: atmo
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: atmo
+  namespace: atmo
+  annotations:
+    cloudflare-tunnel-ingress-controller.strrl.dev/backend-protocol: "http"
+    cloudflare-tunnel-ingress-controller.strrl.dev/tunnel-name: "cf-tunnel-ingress-controller"
+spec:
+  ingressClassName: cloudflare-tunnel
+  rules:
+    - host: atmo.aooba.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: atmo
+                port:
+                  number: 80
