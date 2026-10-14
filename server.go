@@ -2,14 +2,19 @@ package main
 
 import (
 	"crypto/ed25519"
+	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"sync"
 	"time"
 )
+
+//go:embed web/*
+var embeddedWebFS embed.FS
 
 // Discord Interaction types
 const (
@@ -299,6 +304,16 @@ func startServer(port int, pubKeyHex, webhookURL string, lat, lon float64) error
 
 		http.Error(w, "Unknown interaction", http.StatusBadRequest)
 	})
+
+	// Web Frontend (Flutter Web) embedded at root /
+	webSubFS, err := fs.Sub(embeddedWebFS, "web")
+	if err == nil {
+		fileServer := http.FileServer(http.FS(webSubFS))
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			enableCORS(w)
+			fileServer.ServeHTTP(w, r)
+		})
+	}
 
 	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("Starting atmo Caching API Server on %s (Endpoints: /api/v1/pressure, /api/v1/chart.png, /healthz, /interactions)...\n", addr)
