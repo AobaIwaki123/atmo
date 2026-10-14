@@ -14,7 +14,7 @@ import (
 const (
 	defaultLat = 35.6812 // Tokyo Station (Chiyoda, Tokyo)
 	defaultLon = 139.7671
-	apiURL     = "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&hourly=surface_pressure,temperature_2m&timezone=Asia%%2FTokyo"
+	apiURL     = "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&hourly=surface_pressure,temperature_2m&timezone=Asia%%2FTokyo&past_days=2"
 
 	colorReset  = "\033[0m"
 	colorRed    = "\033[91m"
