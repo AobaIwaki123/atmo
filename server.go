@@ -56,9 +56,10 @@ type LocationEntry struct {
 	CurrentT    float64
 	StatusAlert string
 	StatusCode  string
-	ColorHex    string
-	Latitude    float64
-	Longitude   float64
+	ColorHex     string
+	Latitude     float64
+	Longitude    float64
+	LocationName string
 }
 
 // LocationCache manages multiple grid-rounded locations in memory
@@ -69,6 +70,58 @@ type LocationCache struct {
 
 var locationCache = &LocationCache{
 	items: make(map[string]*LocationEntry),
+}
+
+func fetchLocationName(lat, lon float64) string {
+	url := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%.4f&lon=%.4f&zoom=10&accept-language=ja", lat, lon)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "現在地"
+	}
+	req.Header.Set("User-Agent", "atmo-app/1.0 (aooba.net)")
+
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "現在地"
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "現在地"
+	}
+
+	var result struct {
+		Name    string `json:"name"`
+		Address struct {
+			City     string `json:"city"`
+			Town     string `json:"town"`
+			Village  string `json:"village"`
+			Suburb   string `json:"suburb"`
+			Province string `json:"province"`
+		} `json:"address"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "現在地"
+	}
+
+	if result.Address.City != "" {
+		return result.Address.City
+	}
+	if result.Name != "" {
+		return result.Name
+	}
+	if result.Address.Town != "" {
+		return result.Address.Town
+	}
+	if result.Address.Village != "" {
+		return result.Address.Village
+	}
+	if result.Address.Province != "" {
+		return result.Address.Province
+	}
+	return "現在地"
 }
 
 func getGridKey(lat, lon float64) (string, float64, float64) {
@@ -141,19 +194,20 @@ func getOrFetchLocation(lat, lon float64) (*LocationEntry, error) {
 	}
 
 	newEntry := &LocationEntry{
-		Data:        data,
-		ChartPNG:    chartBytes,
-		LastUpdated: now,
-		ExpireAt:    now.Add(10 * time.Minute),
-		CurrentIdx:  currentIdx,
-		CurrentP:    currentP,
-		Diff3h:      diff3h,
-		CurrentT:    currentT,
-		StatusAlert: statusAlert,
-		StatusCode:  statusCode,
-		ColorHex:    colorHex,
-		Latitude:    rLat,
-		Longitude:   rLon,
+		Data:         data,
+		ChartPNG:     chartBytes,
+		LastUpdated:  now,
+		ExpireAt:     now.Add(10 * time.Minute),
+		CurrentIdx:   currentIdx,
+		CurrentP:     currentP,
+		Diff3h:       diff3h,
+		CurrentT:     currentT,
+		StatusAlert:  statusAlert,
+		StatusCode:   statusCode,
+		ColorHex:     colorHex,
+		Latitude:     rLat,
+		Longitude:    rLon,
+		LocationName: fetchLocationName(rLat, rLon),
 	}
 
 	// Evict expired entries if cache grows large
@@ -166,8 +220,8 @@ func getOrFetchLocation(lat, lon float64) (*LocationEntry, error) {
 	}
 
 	locationCache.items[key] = newEntry
-	fmt.Printf("[%s] Grid (%s) cached. Pressure: %.1f hPa (Diff: %+.1f hPa)\n",
-		now.Format("2006-01-02 15:04:05"), key, currentP, diff3h)
+	fmt.Printf("[%s] Grid (%s: %s) cached. Pressure: %.1f hPa (Diff: %+.1f hPa)\n",
+		now.Format("2006-01-02 15:04:05"), key, newEntry.LocationName, currentP, diff3h)
 
 	return newEntry, nil
 }
@@ -181,6 +235,7 @@ type APIPressureResponse struct {
 	StatusMessage string            `json:"status_message"`
 	Latitude      float64           `json:"latitude"`
 	Longitude     float64           `json:"longitude"`
+	LocationName  string            `json:"location_name"`
 	Series        []TimeSeriesPoint `json:"series"`
 }
 
@@ -272,6 +327,7 @@ func startServer(port int, pubKeyHex, webhookURL string, defaultServerLat, defau
 			StatusMessage: entry.StatusAlert,
 			Latitude:      entry.Latitude,
 			Longitude:     entry.Longitude,
+			LocationName:  entry.LocationName,
 			Series:        series,
 		}
 
