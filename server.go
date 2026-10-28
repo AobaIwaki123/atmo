@@ -72,8 +72,24 @@ var locationCache = &LocationCache{
 	items: make(map[string]*LocationEntry),
 }
 
+func normalizePrefecture(name string) string {
+	if name == "" || name == "現在地" {
+		return "現在地"
+	}
+	if name == "東京" {
+		return "東京都"
+	}
+	if name == "京都" {
+		return "京都府"
+	}
+	if name == "大阪" {
+		return "大阪府"
+	}
+	return name
+}
+
 func fetchLocationName(lat, lon float64) string {
-	url := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%.4f&lon=%.4f&zoom=10&accept-language=ja", lat, lon)
+	url := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%.4f&lon=%.4f&zoom=8&accept-language=ja", lat, lon)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "現在地"
@@ -94,11 +110,12 @@ func fetchLocationName(lat, lon float64) string {
 	var result struct {
 		Name    string `json:"name"`
 		Address struct {
+			Province string `json:"province"`
+			State    string `json:"state"`
+			Region   string `json:"region"`
 			City     string `json:"city"`
 			Town     string `json:"town"`
 			Village  string `json:"village"`
-			Suburb   string `json:"suburb"`
-			Province string `json:"province"`
 		} `json:"address"`
 	}
 
@@ -106,20 +123,26 @@ func fetchLocationName(lat, lon float64) string {
 		return "現在地"
 	}
 
-	if result.Address.City != "" {
-		return result.Address.City
+	if result.Address.Province != "" {
+		return normalizePrefecture(result.Address.Province)
+	}
+	if result.Address.State != "" {
+		return normalizePrefecture(result.Address.State)
 	}
 	if result.Name != "" {
-		return result.Name
+		return normalizePrefecture(result.Name)
+	}
+	if result.Address.Region != "" {
+		return normalizePrefecture(result.Address.Region)
+	}
+	if result.Address.City != "" {
+		return result.Address.City
 	}
 	if result.Address.Town != "" {
 		return result.Address.Town
 	}
 	if result.Address.Village != "" {
 		return result.Address.Village
-	}
-	if result.Address.Province != "" {
-		return result.Address.Province
 	}
 	return "現在地"
 }
