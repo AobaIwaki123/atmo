@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プライバシーポリシー - atmo</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --border: #334155;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 32px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 1.5rem;
+      color: var(--accent);
+      margin-top: 0;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    h2 {
+      font-size: 1.2rem;
+      color: var(--text);
+      margin-top: 24px;
+    }
+    p, li {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>atmo プライバシーポリシー</h1>
+    <p>最終更新日: 2026年10月28日</p>
+
+    <p>本プライバシーポリシーは、Aoba Iwaki（以下「当開発者」）が提供するアプリケーション「atmo」（以下「本アプリ」）における利用者情報の取り扱いについて定めたものです。</p>
+
+    <h2>1. 取得する情報とその目的</h2>
+    <p>本アプリは、サービスの提供および機能向上のために以下の情報を利用します。</p>
+    <ul>
+      <li><strong>位置情報（緯度・経度）</strong>: 利用者の現在地における気圧データ、24時間気圧推移グラフ、および気圧急変に伴うアラート情報を正確に取得・表示するために利用します。</li>
+    </ul>
+
+    <h2>2. 外部送信および第三者提供</h2>
+    <p>本アプリは、現在地の気象・気圧データを取得するため、以下の外部サービスと通信を行います。</p>
+    <ul>
+      <li><strong>Open-Meteo API</strong>: 気象・気圧予測データの取得</li>
+      <li><strong>atmo バックエンド API (atmo.aooba.net)</strong>: 自治体名逆引き（Nominatim 連携）および空間気圧データキャッシュの提供</li>
+    </ul>
+    <p>送信されるデータは緯度・経度情報のみであり、氏名、メールアドレス、電話番号、端末固有識別子などの個人を特定可能な情報は一切含まれません。また、取得した情報を広告配信や行動追跡等の目的で第三者に提供・販売することは一切ありません。</p>
+
+    <h2>3. データの保存と破棄</h2>
+    <p>送信された位置情報は、リアルタイムの気圧データ取得および空間キャッシュの生成にのみ一時的に利用され、サーバー上に個人の行動履歴として永続的に保存・蓄積されることはありません。</p>
+
+    <h2>4. 位置情報の利用許可と停止</h2>
+    <p>利用者は、端末の設定より本アプリによる位置情報の利用をいつでも許可または停止することができます。</p>
+
+    <h2>5. お問い合わせ窓口</h2>
+    <p>本ポリシーに関するお問い合わせは、以下の窓口までお願いいたします。</p>
+    <ul>
+      <li>開発者: Aoba Iwaki</li>
+      <li>リポジトリ: <a href="https://github.com/AobaIwaki123/atmo-app/issues" target="_blank" rel="noopener">atmo-app GitHub Issues</a></li>
+      <li>Web サイト: <a href="https://atmo.aooba.net">atmo.aooba.net</a></li>
+    </ul>
+
+    <div class="footer">
+      &copy; 2026 Aoba Iwaki. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
