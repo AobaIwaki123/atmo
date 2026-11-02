@@ -94,7 +94,7 @@ func fetchLocationName(lat, lon float64) string {
 	if err != nil {
 		return "現在地"
 	}
-	req.Header.Set("User-Agent", "atmo-app/1.0 (aooba.net)")
+	req.Header.Set("User-Agent", "atmo-app/1.0 (iorin.net)")
 
 	client := &http.Client{Timeout: 3 * time.Second}
 	resp, err := client.Do(req)

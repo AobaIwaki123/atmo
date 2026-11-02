@@ -29,7 +29,7 @@
 
 | リポジトリ | 主な役割 | 技術スタック | デプロイ・稼働先 |
 |---|---|---|---|
-| **`atmo`**<br>(バックエンド & Webサーバー) | ・Open-Meteo 気圧データの空間キャッシュ API<br>・Discord への定期気圧アラート通知 (CronJob)<br>・Flutter Web ビルド成果物のホスティング | Go (Golang) | 自宅 Kubernetes<br>(`https://atmo.aooba.net`) |
+| **`atmo`**<br>(バックエンド & Webサーバー) | ・Open-Meteo 気圧データの空間キャッシュ API<br>・Discord への定期気圧アラート通知 (CronJob)<br>・Flutter Web ビルド成果物のホスティング | Go (Golang) | 自宅 Kubernetes<br>(`https://atmo.iorin.net`) |
 | **`atmo-app`**<br>(フロントエンド / アプリ本体) | ・iOS / Android / Web 向けの共通 UI 描画<br>・24時間気圧推移グラフ (`fl_chart`)<br>・ホーム画面ウィジェット (WidgetKit / AppWidget)<br>・プライバシー保護（おおよその位置情報の取得） | Flutter (Dart)<br>Swift (iOS ウィジェット)<br>Kotlin (Android ウィジェット) | App Store / TestFlight<br>GitHub Releases (APK) |
 
 ---
@@ -39,14 +39,14 @@
 ### Q1. アプリ（`atmo-app`）は Go の CLI コマンドを実行しているのか？
 **A. 実行していません。**
 スマホアプリやブラウザのサンドボックス制約上、端末内で外部の Go CLI バイナリを実行することはできません。
-アプリはすべて **HTTP 通信（REST API: `GET https://atmo.aooba.net/api/v1/pressure`）** を経由して Go サーバーから JSON データを受信しています。
+アプリはすべて **HTTP 通信（REST API: `GET https://atmo.iorin.net/api/v1/pressure`）** を経由して Go サーバーから JSON データを受信しています。
 
 ### Q2. `atmo-app` は Kotlin で作られているのか？
 **A. アプリ本体の 95% 以上は Flutter (Dart) で作られています。**
 画面レイアウト、グラフ描画、ボタン、状態管理、API 通信などはすべて `lib/` 配下の Dart コードです。
 Kotlin は、Android のホーム画面ウィジェットを OS に認識させるためのネイティブ連携コード（`android/app/.../AtmoSmallWidgetProvider.kt`）においてピンポイントで利用されています（iOS 側では Swift が使われています）。
 
-### Q3. `https://atmo.aooba.net/` は何のサーバーなのか？
+### Q3. `https://atmo.iorin.net/` は何のサーバーなのか？
 **A. Go 製の `atmo` が、Flutter Web の成果物を配信している Web サーバーです。**
 `atmo-app` で `flutter build web` した成果物を、Go の `//go:embed` 機能を用いて Go のシングルバイナリに埋め込み、Cloudflare Tunnel Ingress 経由で公開しています。
 
@@ -58,7 +58,7 @@ Kotlin は、Android のホーム画面ウィジェットを OS に認識させ�
    - `atmo-app` 内で `flutter build ipa --release` を実行し、Transporter や Xcode から App Store Connect へアップロードします（`atmo` リポジトリは関与しません）。
 2. **Android アプリ (野良 APK)**:
    - `atmo-app` でバンプしたバージョンタグ（`git tag v1.X.X`）を Push すると、GitHub Actions CI が APK を自動ビルドして GitHub Releases に公開します。
-3. **Web 版 (`https://atmo.aooba.net`)**:
+3. **Web 版 (`https://atmo.iorin.net`)**:
    - `atmo-app` で `flutter build web` を実行し、生成された静的ファイルを `atmo/web/` にコピーしてコミット & Push すると、`atmo` の CI（Docker & k8s）により自動デプロイされます。
 
 ---
