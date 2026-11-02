@@ -63,7 +63,7 @@ kubectl create secret generic atmo-secrets \
   --from-literal=discord-webhook-url="https://discord.com/api/webhooks/..."
 ```
 
-2. Apply CronJob (runs hourly):
+2. Apply CronJob (runs every 3 hours):
 ```bash
 kubectl apply -f k8s/cronjob.yaml
 ```
