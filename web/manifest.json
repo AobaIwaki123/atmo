@@ -1,11 +1,11 @@
 {
-    "name": "atmo",
-    "short_name": "atmo",
+    "name": "ソラケア",
+    "short_name": "ソラケア",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#060913",
     "theme_color": "#060913",
-    "description": "気圧の変化と気象病リスクの目安を確認するatmoアプリ。",
+    "description": "気圧の変化と気象病リスクの目安を確認するソラケアアプリ。",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

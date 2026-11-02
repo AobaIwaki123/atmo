@@ -26534,7 +26534,7 @@ l=t.N
 j=A.r(l,t.z)
 j.m(0,"id","selected_location_prefecture")
 j.m(0,"defaultValue",null)
-j.m(0,"appGroupId","group.net.aooba.atmo")
+j.m(0,"appGroupId","group.net.iorin.atmoapp.shared")
 s=12
 return A.T(B.Nw.lY("getWidgetData",j,!1,l),$async$Ls)
 case 12:m=b
@@ -41997,7 +41997,7 @@ break
 case 1:return A.P(q,r)}})
 return A.Q($async$yn,r)}}
 A.I1.prototype={
-K(a){return new A.zy(B.Pp,"atmo",A.ux(B.ah,B.DH,B.EW,!0),!1,null)}}
+K(a){return new A.zy(B.Pp,"\u30bd\u30e9\u30b1\u30a2",A.ux(B.ah,B.DH,B.EW,!0),!1,null)}}
 A.Ak.prototype={
 ak(){return new A.EU(B.oW)}}
 A.EU.prototype={
@@ -92759,7 +92759,7 @@ B.XM=new A.dA(B.Vo,B.Ub,B.Vp,B.VT,B.TR,B.TZ,B.Uy,B.VN,B.UL,B.Wf,B.Ti,B.TC,B.Wc,B
 B.Xg=new A.k(!0,B.bi,null,null,null,null,22,B.eD,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.XN=new A.d0("hPa",null,B.Xg,null,null,null,null,null,null)
 B.WG=new A.k(!0,B.C,null,null,null,null,17,B.c6,null,0.5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.XO=new A.d0("atmo",null,B.WG,null,null,null,null,null,null)
+B.XO=new A.d0("\u30bd\u30e9\u30b1\u30a2",null,B.WG,null,null,null,null,null,null)
 B.TI=new A.k(!0,B.bi,null,null,null,null,12,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.XP=new A.d0("\u73fe\u5728\u306e\u89b3\u6e2c\u5024",null,B.TI,null,null,null,null,null,null)
 B.VR=new A.k(!0,null,null,null,null,null,14,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
