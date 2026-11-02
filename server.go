@@ -44,137 +44,154 @@ type InteractionResponseData struct {
 	Embeds  []DiscordEmbed `json:"embeds,omitempty"`
 }
 
-// LocationEntry holds the weather and chart data for a specific rounded grid coordinate
+const (
+	locationRefreshInterval = time.Hour
+	// The public Open-Meteo endpoint is called only by the refresh loop. Keeping a
+	// small pause between locations also avoids bursty traffic during a refresh.
+	upstreamRequestSpacing = 1200 * time.Millisecond
+	locationMatchRadiusKm  = 20.0
+)
+
+// LocationDefinition is one of the 47 supported representative points. The
+// API accepts coordinates only to select one of these definitions; it never
+// creates a new upstream request for arbitrary user-supplied coordinates.
+type LocationDefinition struct {
+	Prefecture     string
+	Representative string
+	Latitude       float64
+	Longitude      float64
+}
+
+var locationCatalog = []LocationDefinition{
+	{Prefecture: "北海道", Representative: "札幌", Latitude: 43.0642, Longitude: 141.3469},
+	{Prefecture: "青森県", Representative: "青森", Latitude: 40.8244, Longitude: 140.7400},
+	{Prefecture: "岩手県", Representative: "盛岡", Latitude: 39.7036, Longitude: 141.1525},
+	{Prefecture: "宮城県", Representative: "仙台", Latitude: 38.2689, Longitude: 140.8719},
+	{Prefecture: "秋田県", Representative: "秋田", Latitude: 39.7186, Longitude: 140.1025},
+	{Prefecture: "山形県", Representative: "山形", Latitude: 38.2406, Longitude: 140.3633},
+	{Prefecture: "福島県", Representative: "福島", Latitude: 37.7500, Longitude: 140.4678},
+	{Prefecture: "茨城県", Representative: "水戸", Latitude: 36.3414, Longitude: 140.4467},
+	{Prefecture: "栃木県", Representative: "宇都宮", Latitude: 36.5658, Longitude: 139.8836},
+	{Prefecture: "群馬県", Representative: "前橋", Latitude: 36.3911, Longitude: 139.0608},
+	{Prefecture: "埼玉県", Representative: "さいたま", Latitude: 35.8569, Longitude: 139.6489},
+	{Prefecture: "千葉県", Representative: "千葉", Latitude: 35.6047, Longitude: 140.1233},
+	{Prefecture: "東京都", Representative: "東京", Latitude: 35.6895, Longitude: 139.6917},
+	{Prefecture: "神奈川県", Representative: "横浜", Latitude: 35.4478, Longitude: 139.6425},
+	{Prefecture: "新潟県", Representative: "新潟", Latitude: 37.9022, Longitude: 139.0236},
+	{Prefecture: "富山県", Representative: "富山", Latitude: 36.6953, Longitude: 137.2114},
+	{Prefecture: "石川県", Representative: "金沢", Latitude: 36.5944, Longitude: 136.6256},
+	{Prefecture: "福井県", Representative: "福井", Latitude: 36.0653, Longitude: 136.2219},
+	{Prefecture: "山梨県", Representative: "甲府", Latitude: 35.6639, Longitude: 138.5683},
+	{Prefecture: "長野県", Representative: "長野", Latitude: 36.6514, Longitude: 138.1811},
+	{Prefecture: "岐阜県", Representative: "岐阜", Latitude: 35.3911, Longitude: 136.7222},
+	{Prefecture: "静岡県", Representative: "静岡", Latitude: 34.9769, Longitude: 138.3831},
+	{Prefecture: "愛知県", Representative: "名古屋", Latitude: 35.1803, Longitude: 136.9067},
+	{Prefecture: "三重県", Representative: "津", Latitude: 34.7303, Longitude: 136.5086},
+	{Prefecture: "滋賀県", Representative: "大津", Latitude: 35.0044, Longitude: 135.8683},
+	{Prefecture: "京都府", Representative: "京都", Latitude: 35.0214, Longitude: 135.7556},
+	{Prefecture: "大阪府", Representative: "大阪", Latitude: 34.6864, Longitude: 135.5200},
+	{Prefecture: "兵庫県", Representative: "神戸", Latitude: 34.6914, Longitude: 135.1831},
+	{Prefecture: "奈良県", Representative: "奈良", Latitude: 34.6853, Longitude: 135.8328},
+	{Prefecture: "和歌山県", Representative: "和歌山", Latitude: 34.2261, Longitude: 135.1675},
+	{Prefecture: "鳥取県", Representative: "鳥取", Latitude: 35.5036, Longitude: 134.2383},
+	{Prefecture: "島根県", Representative: "松江", Latitude: 35.4722, Longitude: 133.0506},
+	{Prefecture: "岡山県", Representative: "岡山", Latitude: 34.6617, Longitude: 133.9350},
+	{Prefecture: "広島県", Representative: "広島", Latitude: 34.3964, Longitude: 132.4594},
+	{Prefecture: "山口県", Representative: "山口", Latitude: 34.1858, Longitude: 131.4714},
+	{Prefecture: "徳島県", Representative: "徳島", Latitude: 34.0658, Longitude: 134.5594},
+	{Prefecture: "香川県", Representative: "高松", Latitude: 34.3403, Longitude: 134.0433},
+	{Prefecture: "愛媛県", Representative: "松山", Latitude: 33.8417, Longitude: 132.7658},
+	{Prefecture: "高知県", Representative: "高知", Latitude: 33.5597, Longitude: 133.5311},
+	{Prefecture: "福岡県", Representative: "福岡", Latitude: 33.6064, Longitude: 130.4181},
+	{Prefecture: "佐賀県", Representative: "佐賀", Latitude: 33.2494, Longitude: 130.2989},
+	{Prefecture: "長崎県", Representative: "長崎", Latitude: 32.7447, Longitude: 129.8736},
+	{Prefecture: "熊本県", Representative: "熊本", Latitude: 32.7897, Longitude: 130.7417},
+	{Prefecture: "大分県", Representative: "大分", Latitude: 33.2381, Longitude: 131.6125},
+	{Prefecture: "宮崎県", Representative: "宮崎", Latitude: 31.9111, Longitude: 131.4239},
+	{Prefecture: "鹿児島県", Representative: "鹿児島", Latitude: 31.5603, Longitude: 130.5581},
+	{Prefecture: "沖縄県", Representative: "那覇", Latitude: 26.2125, Longitude: 127.6811},
+}
+
+// LocationEntry holds the weather and chart data for one supported point.
 type LocationEntry struct {
-	Data        WeatherResponse
-	ChartPNG    []byte
-	LastUpdated time.Time
-	ExpireAt    time.Time
-	CurrentIdx  int
-	CurrentP    float64
-	Diff3h      float64
-	CurrentT    float64
-	StatusAlert string
-	StatusCode  string
+	Data         WeatherResponse
+	ChartPNG     []byte
+	LastUpdated  time.Time
+	CurrentIdx   int
+	CurrentP     float64
+	Diff3h       float64
+	CurrentT     float64
+	StatusAlert  string
+	StatusCode   string
 	ColorHex     string
 	Latitude     float64
 	Longitude    float64
 	LocationName string
 }
 
-// LocationCache manages multiple grid-rounded locations in memory
+// LocationCache manages the fixed supported locations in memory.
 type LocationCache struct {
-	mu    sync.RWMutex
-	items map[string]*LocationEntry
+	mu          sync.RWMutex
+	refreshMu   sync.Mutex
+	items       map[string]*LocationEntry
+	initialized bool
 }
 
 var locationCache = &LocationCache{
 	items: make(map[string]*LocationEntry),
 }
 
-func normalizePrefecture(name string) string {
-	if name == "" || name == "現在地" {
-		return "現在地"
-	}
-	if name == "東京" {
-		return "東京都"
-	}
-	if name == "京都" {
-		return "京都府"
-	}
-	if name == "大阪" {
-		return "大阪府"
-	}
-	return name
+func distanceKm(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadiusKm = 6371.0
+	lat1Rad := lat1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLon := (lon2 - lon1) * math.Pi / 180
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1Rad)*math.Cos(lat2Rad)*math.Sin(dLon/2)*math.Sin(dLon/2)
+	return earthRadiusKm * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 
-func fetchLocationName(lat, lon float64) string {
-	url := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%.4f&lon=%.4f&zoom=8&accept-language=ja", lat, lon)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "現在地"
+func resolveLocation(lat, lon float64) (LocationDefinition, bool) {
+	var best LocationDefinition
+	bestDistance := math.MaxFloat64
+	for _, location := range locationCatalog {
+		distance := distanceKm(lat, lon, location.Latitude, location.Longitude)
+		if distance < bestDistance {
+			best = location
+			bestDistance = distance
+		}
 	}
-	req.Header.Set("User-Agent", "atmo-app/1.0 (iorin.net)")
-
-	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "現在地"
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "現在地"
-	}
-
-	var result struct {
-		Name    string `json:"name"`
-		Address struct {
-			Province string `json:"province"`
-			State    string `json:"state"`
-			Region   string `json:"region"`
-			City     string `json:"city"`
-			Town     string `json:"town"`
-			Village  string `json:"village"`
-		} `json:"address"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "現在地"
-	}
-
-	if result.Address.Province != "" {
-		return normalizePrefecture(result.Address.Province)
-	}
-	if result.Address.State != "" {
-		return normalizePrefecture(result.Address.State)
-	}
-	if result.Name != "" {
-		return normalizePrefecture(result.Name)
-	}
-	if result.Address.Region != "" {
-		return normalizePrefecture(result.Address.Region)
-	}
-	if result.Address.City != "" {
-		return result.Address.City
-	}
-	if result.Address.Town != "" {
-		return result.Address.Town
-	}
-	if result.Address.Village != "" {
-		return result.Address.Village
-	}
-	return "現在地"
+	return best, bestDistance <= locationMatchRadiusKm
 }
 
-func getGridKey(lat, lon float64) (string, float64, float64) {
-	roundedLat := math.Round(lat*100) / 100
-	roundedLon := math.Round(lon*100) / 100
-	return fmt.Sprintf("%.2f,%.2f", roundedLat, roundedLon), roundedLat, roundedLon
+func requestedLocation(r *http.Request, defaultLat, defaultLon float64) (LocationDefinition, error) {
+	lat := defaultLat
+	lon := defaultLon
+	if value := r.URL.Query().Get("lat"); value != "" {
+		parsed, err := strconv.ParseFloat(value, 64)
+		if err != nil || parsed < -90 || parsed > 90 {
+			return LocationDefinition{}, fmt.Errorf("invalid latitude")
+		}
+		lat = parsed
+	}
+	if value := r.URL.Query().Get("lon"); value != "" {
+		parsed, err := strconv.ParseFloat(value, 64)
+		if err != nil || parsed < -180 || parsed > 180 {
+			return LocationDefinition{}, fmt.Errorf("invalid longitude")
+		}
+		lon = parsed
+	}
+
+	location, ok := resolveLocation(lat, lon)
+	if !ok {
+		return LocationDefinition{}, fmt.Errorf("unsupported location")
+	}
+	return location, nil
 }
 
-func getOrFetchLocation(lat, lon float64) (*LocationEntry, error) {
-	key, rLat, rLon := getGridKey(lat, lon)
-	now := time.Now()
-
-	// Read lock check
-	locationCache.mu.RLock()
-	entry, exists := locationCache.items[key]
-	if exists && now.Before(entry.ExpireAt) {
-		locationCache.mu.RUnlock()
-		return entry, nil
-	}
-	locationCache.mu.RUnlock()
-
-	// Write lock for fetch & update
-	locationCache.mu.Lock()
-	defer locationCache.mu.Unlock()
-
-	if entry, exists := locationCache.items[key]; exists && now.Before(entry.ExpireAt) {
-		return entry, nil
-	}
-
-	weatherURL := fmt.Sprintf(apiURL, rLat, rLon)
+func fetchLocation(location LocationDefinition) (*LocationEntry, error) {
+	weatherURL := fmt.Sprintf(apiURL, location.Latitude, location.Longitude)
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Get(weatherURL)
 	if err != nil {
@@ -190,13 +207,21 @@ func getOrFetchLocation(lat, lon float64) (*LocationEntry, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return nil, err
 	}
+	if len(data.Hourly.Time) == 0 || len(data.Hourly.SurfacePressure) == 0 || len(data.Hourly.Temperature2m) == 0 {
+		return nil, fmt.Errorf("open-meteo returned empty hourly data")
+	}
+
+	currentIdx := getCurrentIndex(data.Hourly.Time)
+	if currentIdx >= len(data.Hourly.SurfacePressure) || currentIdx >= len(data.Hourly.Temperature2m) {
+		return nil, fmt.Errorf("open-meteo returned inconsistent hourly data")
+	}
 
 	chartBytes, err := generateChartPNG(data, 24, 24)
 	if err != nil {
 		chartBytes = nil
 	}
 
-	currentIdx := getCurrentIndex(data.Hourly.Time)
+	now := time.Now()
 	currentP := data.Hourly.SurfacePressure[currentIdx]
 	prev3hIdx := max(0, currentIdx-3)
 	diff3h := currentP - data.Hourly.SurfacePressure[prev3hIdx]
@@ -216,11 +241,10 @@ func getOrFetchLocation(lat, lon float64) (*LocationEntry, error) {
 		colorHex = "#f9e2af"
 	}
 
-	newEntry := &LocationEntry{
+	return &LocationEntry{
 		Data:         data,
 		ChartPNG:     chartBytes,
 		LastUpdated:  now,
-		ExpireAt:     now.Add(10 * time.Minute),
 		CurrentIdx:   currentIdx,
 		CurrentP:     currentP,
 		Diff3h:       diff3h,
@@ -228,25 +252,65 @@ func getOrFetchLocation(lat, lon float64) (*LocationEntry, error) {
 		StatusAlert:  statusAlert,
 		StatusCode:   statusCode,
 		ColorHex:     colorHex,
-		Latitude:     rLat,
-		Longitude:    rLon,
-		LocationName: fetchLocationName(rLat, rLon),
+		Latitude:     location.Latitude,
+		Longitude:    location.Longitude,
+		LocationName: location.Prefecture,
+	}, nil
+}
+
+func refreshLocation(location LocationDefinition) error {
+	entry, err := fetchLocation(location)
+	if err != nil {
+		return err
 	}
 
-	// Evict expired entries if cache grows large
-	if len(locationCache.items) > 500 {
-		for k, v := range locationCache.items {
-			if now.After(v.ExpireAt) {
-				delete(locationCache.items, k)
-			}
+	locationCache.mu.Lock()
+	locationCache.items[location.Prefecture] = entry
+	locationCache.mu.Unlock()
+
+	fmt.Printf("[%s] %s cached. Pressure: %.1f hPa (Diff: %+.1f hPa)\n",
+		entry.LastUpdated.Format("2006-01-02 15:04:05"), location.Prefecture, entry.CurrentP, entry.Diff3h)
+	return nil
+}
+
+func refreshAllLocations() {
+	locationCache.refreshMu.Lock()
+	defer locationCache.refreshMu.Unlock()
+
+	startedAt := time.Now()
+	successCount := 0
+	for index, location := range locationCatalog {
+		if index > 0 {
+			time.Sleep(upstreamRequestSpacing)
 		}
+		if err := refreshLocation(location); err != nil {
+			fmt.Printf("[%s] %s refresh failed: %v\n", time.Now().Format("2006-01-02 15:04:05"), location.Prefecture, err)
+			continue
+		}
+		successCount++
 	}
 
-	locationCache.items[key] = newEntry
-	fmt.Printf("[%s] Grid (%s: %s) cached. Pressure: %.1f hPa (Diff: %+.1f hPa)\n",
-		now.Format("2006-01-02 15:04:05"), key, newEntry.LocationName, currentP, diff3h)
+	locationCache.mu.Lock()
+	locationCache.initialized = true
+	locationCache.mu.Unlock()
+	fmt.Printf("[%s] Location refresh complete: %d/%d succeeded in %s\n",
+		time.Now().Format("2006-01-02 15:04:05"), successCount, len(locationCatalog), time.Since(startedAt).Round(time.Second))
+}
 
-	return newEntry, nil
+func getCachedLocation(location LocationDefinition) (*LocationEntry, error) {
+	locationCache.mu.RLock()
+	entry, exists := locationCache.items[location.Prefecture]
+	locationCache.mu.RUnlock()
+	if !exists {
+		return nil, fmt.Errorf("location data is not ready")
+	}
+	return entry, nil
+}
+
+func isLocationCacheReady() bool {
+	locationCache.mu.RLock()
+	defer locationCache.mu.RUnlock()
+	return locationCache.initialized
 }
 
 type APIPressureResponse struct {
@@ -268,19 +332,16 @@ type TimeSeriesPoint struct {
 	IsCurrent bool    `json:"is_current"`
 }
 
-// Background poller every 1 hour for default location (Discord webhook)
-func startBackgroundPoller(lat, lon float64, webhookURL string) {
-	// Initial fetch
-	if _, err := getOrFetchLocation(lat, lon); err != nil {
-		fmt.Printf("Initial cache fetch failed: %v\n", err)
-	}
-
-	ticker := time.NewTicker(1 * time.Hour)
+// Background poller refreshes the fixed 47-location catalog once per hour.
+// Request handlers only read this cache and never call upstream services.
+func startBackgroundPoller() {
 	go func() {
+		refreshAllLocations()
+
+		ticker := time.NewTicker(locationRefreshInterval)
+		defer ticker.Stop()
 		for range ticker.C {
-			if _, err := getOrFetchLocation(lat, lon); err != nil {
-				fmt.Printf("Periodic cache update failed: %v\n", err)
-			}
+			refreshAllLocations()
 		}
 	}()
 }
@@ -292,13 +353,22 @@ func enableCORS(w http.ResponseWriter) {
 }
 
 func startServer(port int, pubKeyHex, webhookURL string, defaultServerLat, defaultServerLon float64) error {
-	startBackgroundPoller(defaultServerLat, defaultServerLon, webhookURL)
+	startBackgroundPoller()
 
 	// Liveness/Readiness probe
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		enableCORS(w)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
+	})
+	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		enableCORS(w)
+		if !isLocationCacheReady() {
+			http.Error(w, "location cache is warming up", http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("READY"))
 	})
 
 	// JSON API: GET /api/v1/pressure?lat=35.68&lon=139.77
@@ -309,20 +379,12 @@ func startServer(port int, pubKeyHex, webhookURL string, defaultServerLat, defau
 			return
 		}
 
-		reqLat := defaultServerLat
-		reqLon := defaultServerLon
-		if latStr := r.URL.Query().Get("lat"); latStr != "" {
-			if v, err := strconv.ParseFloat(latStr, 64); err == nil && v >= -90 && v <= 90 {
-				reqLat = v
-			}
+		location, err := requestedLocation(r, defaultServerLat, defaultServerLon)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-		if lonStr := r.URL.Query().Get("lon"); lonStr != "" {
-			if v, err := strconv.ParseFloat(lonStr, 64); err == nil && v >= -180 && v <= 180 {
-				reqLon = v
-			}
-		}
-
-		entry, err := getOrFetchLocation(reqLat, reqLon)
+		entry, err := getCachedLocation(location)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Data fetch error: %v", err), http.StatusServiceUnavailable)
 			return
@@ -361,20 +423,12 @@ func startServer(port int, pubKeyHex, webhookURL string, defaultServerLat, defau
 	// Image API: GET /api/v1/chart.png?lat=...&lon=...
 	http.HandleFunc("/api/v1/chart.png", func(w http.ResponseWriter, r *http.Request) {
 		enableCORS(w)
-		reqLat := defaultServerLat
-		reqLon := defaultServerLon
-		if latStr := r.URL.Query().Get("lat"); latStr != "" {
-			if v, err := strconv.ParseFloat(latStr, 64); err == nil && v >= -90 && v <= 90 {
-				reqLat = v
-			}
+		location, err := requestedLocation(r, defaultServerLat, defaultServerLon)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-		if lonStr := r.URL.Query().Get("lon"); lonStr != "" {
-			if v, err := strconv.ParseFloat(lonStr, 64); err == nil && v >= -180 && v <= 180 {
-				reqLon = v
-			}
-		}
-
-		entry, err := getOrFetchLocation(reqLat, reqLon)
+		entry, err := getCachedLocation(location)
 		if err != nil || len(entry.ChartPNG) == 0 {
 			http.Error(w, "Chart not generated yet", http.StatusServiceUnavailable)
 			return
@@ -418,7 +472,12 @@ func startServer(port int, pubKeyHex, webhookURL string, defaultServerLat, defau
 		}
 
 		if req.Type == interactionTypeApplicationCommand {
-			entry, err := getOrFetchLocation(defaultServerLat, defaultServerLon)
+			location, ok := resolveLocation(defaultServerLat, defaultServerLon)
+			if !ok {
+				http.Error(w, "Default location is unsupported", http.StatusInternalServerError)
+				return
+			}
+			entry, err := getCachedLocation(location)
 			if err != nil {
 				http.Error(w, "Weather data unavailable", http.StatusServiceUnavailable)
 				return

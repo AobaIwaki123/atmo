@@ -4,6 +4,10 @@ A lightweight, zero-dependency barometric pressure CLI, PNG chart renderer, and 
 
 Powered by [Open-Meteo](https://open-meteo.com/) free weather API (no API key required).
 
+The web server supports the app's 47 fixed representative locations. It refreshes
+those locations sequentially once per hour and serves user requests from the
+in-memory cache; user requests never trigger upstream weather or geocoding calls.
+
 ## Features
 
 - **Terminal 2D ASCII Chart**: Instant visual curves with a dynamic "NOW" time cursor.
