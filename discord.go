@@ -54,6 +54,7 @@ func sendDiscordWebhook(webhookURL string, pngBytes []byte, data WeatherResponse
 
 	desc := fmt.Sprintf("• **現在気圧**: `%.1f hPa`\n• **3h 変動**: `%+.1f hPa`\n• **気温**: `%.1f °C`\n• **判定**: %s",
 		currentP, diff3h, currentT, statusAlert)
+	desc += "\n\n気象データ: [Open-Meteo.com](https://open-meteo.com/)（[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)）"
 
 	payload := DiscordWebhookPayload{
 		Embeds: []DiscordEmbed{
