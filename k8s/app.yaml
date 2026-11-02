@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: atmo
-          image: ghcr.io/aobaiwaki123/atmo:edc6dc5
+          image: ghcr.io/aobaiwaki123/atmo:a253714
           args:
             - "-serve"
             - "-port"
@@ -87,6 +87,17 @@ metadata:
 spec:
   ingressClassName: cloudflare-tunnel
   rules:
+    - host: atmo.iorin.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: atmo
+                port:
+                  number: 80
+    # Keep the old hostname during the client migration window.
     - host: atmo.aooba.net
       http:
         paths:
